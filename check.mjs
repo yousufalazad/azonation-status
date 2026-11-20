@@ -9,12 +9,14 @@ const hourly = now.getUTCMinutes() < 10; // one history point per hour (the sche
 const repo = process.env.GITHUB_REPOSITORY;
 const token = process.env.GITHUB_TOKEN;
 
-async function probe(url) {
+async function probe(url, expect) {
   for (let i = 0; i < 3; i++) {
     const t = Date.now();
     try {
       const r = await fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(15000), headers: { 'user-agent': 'azonation-status' } });
-      if (r.ok) return { up: true, ms: Date.now() - t, code: r.status };
+      const body = expect ? await r.text() : '';
+      if (r.ok && (!expect || body.includes(expect))) return { up: true, ms: Date.now() - t, code: r.status };
+      if (r.ok && i === 2) return { up: false, ms: null, code: 'not ok: ' + body.slice(0, 80) };
       if (i === 2) return { up: false, ms: null, code: r.status };
     } catch (e) {
       if (i === 2) return { up: false, ms: null, code: String(e.name || 'error') };
@@ -36,7 +38,7 @@ const out = { updated: now.toISOString(), services: {} };
 let changed = false;
 for (const s of services) {
   const was = old.services[s.id] || { history: [] };
-  const res = await probe(s.url);
+  const res = await probe(s.url, s.expect);
   const history = (was.history || []).slice(-24 * 30);
   if (hourly && (!history.length || now - new Date(history.at(-1)[0]) > 30 * 60000)) history.push([now.toISOString(), res.up ? res.ms : -1]);
   const flipped = was.up !== undefined && was.up !== res.up;

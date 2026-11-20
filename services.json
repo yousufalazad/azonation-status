@@ -1,5 +1,23 @@
 [
-  { "id": "app", "name": "Azonation app", "url": "https://app.azonation.com/" },
-  { "id": "api", "name": "Azonation service (API)", "url": "https://api.azonation.com/up" },
-  { "id": "site", "name": "Website azonation.com", "url": "https://azonation.com/" }
+  {
+    "id": "app",
+    "name": "Azonation app",
+    "url": "https://app.azonation.com/"
+  },
+  {
+    "id": "api",
+    "name": "Azonation service (API)",
+    "url": "https://api.azonation.com/up"
+  },
+  {
+    "id": "health",
+    "name": "Background work (emails, reminders, backups)",
+    "url": "https://api.azonation.com/api/v1/health",
+    "expect": "\"status\":\"ok\""
+  },
+  {
+    "id": "site",
+    "name": "Website azonation.com",
+    "url": "https://azonation.com/"
+  }
 ]
