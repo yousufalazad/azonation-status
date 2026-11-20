@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Azonation status</title>
+<meta name="description" content="Is Azonation working? Live status of the Azonation app, service and website.">
+<style>
+  :root { --canvas:#f6f7f9; --surface:#fff; --line:#e3e6eb; --ink:#14181f; --ink2:#4a5261; --muted:#6b7380; --primary:#10408F;
+    --ok:#1f7a4d; --ok-soft:#e5f4ec; --bad:#b42318; --bad-soft:#fdecea; --none:#d5d9e0; }
+  @media (prefers-color-scheme: dark) { :root { --canvas:#0f1218; --surface:#171b23; --line:#2a303b; --ink:#eef1f5; --ink2:#c2c8d2;
+    --muted:#9199a6; --primary:#7ea6ec; --ok:#4cc38a; --ok-soft:#14301f; --bad:#f97066; --bad-soft:#3a1714; --none:#323946; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--canvas); color:var(--ink); font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  main { max-width:760px; margin:0 auto; padding:32px 16px 48px; }
+  header { display:flex; align-items:center; gap:10px; margin-bottom:24px; }
+  header b { font-size:20px; color:var(--primary); letter-spacing:-.01em; }
+  header span { color:var(--muted); }
+  .banner { border-radius:14px; padding:18px 20px; font-weight:600; font-size:18px; margin-bottom:24px; }
+  .banner.ok { background:var(--ok-soft); color:var(--ok); } .banner.bad { background:var(--bad-soft); color:var(--bad); }
+  .banner.wait { background:var(--surface); color:var(--muted); border:1px solid var(--line); }
+  .card { background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:18px 20px; margin-bottom:14px; }
+  .row { display:flex; justify-content:space-between; gap:12px; align-items:baseline; flex-wrap:wrap; }
+  .name { font-weight:600; } .state { font-weight:600; } .state.ok { color:var(--ok); } .state.bad { color:var(--bad); }
+  .meta { color:var(--muted); font-size:14px; margin-top:4px; }
+  .bars { display:flex; gap:3px; margin-top:14px; height:34px; }
+  .bars i { flex:1; border-radius:3px; background:var(--none); }
+  .bars i.ok { background:var(--ok); } .bars i.part { background:#d9a21b; } .bars i.bad { background:var(--bad); }
+  .scale { display:flex; justify-content:space-between; color:var(--muted); font-size:13px; margin-top:6px; }
+  footer { color:var(--muted); font-size:14px; margin-top:28px; }
+  a { color:var(--primary); }
+</style>
+</head>
+<body>
+<main>
+  <header><b>Azonation</b><span>Status</span></header>
+  <div id="banner" class="banner wait">Checking…</div>
+  <div id="list"></div>
+  <footer>Checked about every 5 minutes. The bars show the last 30 days, one per day.
+    <span id="updated"></span> Need help? <a href="https://azonation.com/contact">Contact us</a>.</footer>
+</main>
+<script>
+  const RAW = 'https://raw.githubusercontent.com/yousufalazad/azonation-status/main/status.json';
+  const fmt = (d) => new Date(d).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  async function load() {
+    let data;
+    for (const u of [RAW + '?t=' + Date.now(), 'status.json?t=' + Date.now()]) {
+      try { const r = await fetch(u, { cache: 'no-store' }); if (r.ok) { data = await r.json(); break; } } catch (e) {}
+    }
+    if (!data) { document.getElementById('banner').textContent = 'Status could not be loaded just now.'; return; }
+    const list = Object.values(data.services);
+    const down = list.filter((s) => !s.up);
+    const banner = document.getElementById('banner');
+    banner.className = 'banner ' + (down.length ? 'bad' : 'ok');
+    banner.textContent = down.length ? (down.length === list.length ? 'Azonation is not working right now. We are on it.' : 'Some parts of Azonation are not working. We are on it.') : 'Everything is working.';
+    const today = new Date(); today.setUTCHours(0, 0, 0, 0);
+    document.getElementById('list').innerHTML = list.map((s) => {
+      const days = [];
+      for (let i = 29; i >= 0; i--) {
+        const start = today.getTime() - i * 86400000, end = start + 86400000;
+        const pts = (s.history || []).filter(([t]) => { const x = new Date(t).getTime(); return x >= start && x < end; });
+        if (!pts.length) { days.push('<i title="No data"></i>'); continue; }
+        const up = pts.filter(([, ms]) => ms >= 0).length / pts.length;
+        const label = new Date(start).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) + ': ' + Math.round(up * 1000) / 10 + '% up';
+        days.push(`<i class="${up === 1 ? 'ok' : up >= 0.9 ? 'part' : 'bad'}" title="${label}"></i>`);
+      }
+      const all = s.history || [];
+      const pct = all.length ? Math.round(all.filter(([, ms]) => ms >= 0).length / all.length * 1000) / 10 : null;
+      return `<div class="card"><div class="row"><span class="name">${esc(s.name)}</span>
+        <span class="state ${s.up ? 'ok' : 'bad'}">${s.up ? 'Working' : 'Not working'}</span></div>
+        <div class="meta">${s.up ? 'Answered in ' + s.ms + ' ms' : 'Down since ' + fmt(s.since)}${pct !== null ? ' · ' + pct + '% up in the last 30 days' : ''}</div>
+        <div class="bars">${days.join('')}</div><div class="scale"><span>30 days ago</span><span>Today</span></div></div>`;
+    }).join('');
+    document.getElementById('updated').textContent = 'Last check: ' + fmt(data.updated) + '.';
+  }
+  load(); setInterval(load, 60000);
+</script>
+</body>
+</html>

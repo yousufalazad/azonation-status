@@ -1,0 +1,5 @@
+[
+  { "id": "app", "name": "Azonation app", "url": "https://app.azonation.com/" },
+  { "id": "api", "name": "Azonation service (API)", "url": "https://api.azonation.com/up" },
+  { "id": "site", "name": "Website azonation.com", "url": "https://azonation.com/" }
+]
