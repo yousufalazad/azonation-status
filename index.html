@@ -40,12 +40,12 @@
     <span id="updated"></span> Need help? <a href="https://azonation.com/contact">Contact us</a>.</footer>
 </main>
 <script>
-  const RAW = 'https://raw.githubusercontent.com/yousufalazad/azonation-status/main/status.json';
+  const RAWS = ['https://raw.githubusercontent.com/azongroup/azonation-status/main/status.json', 'https://raw.githubusercontent.com/yousufalazad/azonation-status/main/status.json'];
   const fmt = (d) => new Date(d).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   async function load() {
     let data;
-    for (const u of [RAW + '?t=' + Date.now(), 'status.json?t=' + Date.now()]) {
+    for (const u of [...RAWS, 'status.json'].map((x) => x + '?t=' + Date.now())) {
       try { const r = await fetch(u, { cache: 'no-store' }); if (r.ok) { data = await r.json(); break; } } catch (e) {}
     }
     if (!data) { document.getElementById('banner').textContent = 'Status could not be loaded just now.'; return; }
